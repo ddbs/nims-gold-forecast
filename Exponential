@@ -1,0 +1,43 @@
+#EXPONENTIAL SMOOTHING FORECAST
+
+#Em baixo tentámos modelar a nossa séries e fazer previsões recorrendo ao alisamento exponencial.
+#Logo à partida, decidimos não utilizar o método de alisamento exponencial simples, uma vez que a nossa série é caracterizada por ter tendência e não sazonalidade.
+#Os métodos de alisamento mais indicados serão portanto o Holt's Linear Trend, Holt's Exponential, Damped Linear Trend e,  Damped Exponential Trend.
+
+fit1<-holt(gold.ts, h=6)
+fit2<-holt(gold.ts, initial='optimal', exponential=TRUE, h=6)
+fit3<-holt(gold.ts, initial='optimal', damped=TRUE, h=6)
+fit4<-holt(gold.ts, initial='optimal', exponential=TRUE, damped=TRUE, h=6)
+
+#AIC Results
+AIC(fit1$model)
+AIC(fit2$model)
+AIC(fit3$model)
+AIC(fit4$model)
+
+#GRAPHICS (seria melhor se focasse o periodo de 2015,5 a 2016,5 - n consegui)
+plot(gold.ts, ylab="Gold Prices (corrigir titulo)", xlab="Month", 
+     fcol="black", plot.conf=FALSE)
+lines(fitted(fit1), col="blue")
+lines(fitted(fit2), col="red")
+lines(fitted(fit3), col="green")
+lines(fitted(fit4), col="pink")
+lines(fit1$mean, col="blue")
+lines(fit2$mean, col="red")
+lines(fit3$mean, col="green")
+lines(fit4$mean, col="pink")
+legend("topleft", lty=1, col=c("black","blue","red","green","pink"),
+       c("Series", "Holt's Linear", "Holt's Exponential","Damped Trend","Exponential Damp. Trend"))
+
+
+#Forecasts (para calcular Erro de previsão dos modelos)
+
+fit1$mean
+fit2$mean
+fit3$mean
+fit4$mean
+
+
+#Segundo o AIC o melhor modelo para a nossa série é o Holt's Exponential.
+#Este modelo é mais adequado para séries com tendência e sem sazonalidade como é o caso da nossa.
+#Resta comprovar se o erro de previsão do modelo Holt's Exponential é menor do que o do modelo Damped Exponential Trend cujo AIC foi o segundo mais baixo.

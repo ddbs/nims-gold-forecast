@@ -1,5 +1,5 @@
 ---
-title: "Gold ETF Prices, Daily"
+title: "Modelling Gold Prices"
 output: html_document
 ---
 

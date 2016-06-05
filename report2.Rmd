@@ -281,10 +281,11 @@ x.bind
 
 ```{r}
 # plot forecasts
-ggplot(x.bind, aes(x.t)) + 
+p <- ggplot(x.bind, aes(x.t)) + 
   geom_line(aes(y=x.arga), colour="blue") + 
   geom_line(aes(y=x.argaplusu), colour="red") + 
-  geom_line(aes(y=x.argaminusu), colour="red") 
+  geom_line(aes(y=x.argaminusu), colour="red")
+p + theme_bw()  
 ```
 
 

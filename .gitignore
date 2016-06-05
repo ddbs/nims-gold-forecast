@@ -3,6 +3,7 @@
 /deprecated/
 /datasets/
 /handout/
+/report/
 .RData
 .Rhistory
 dario.R

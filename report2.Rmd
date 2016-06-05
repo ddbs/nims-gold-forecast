@@ -1,0 +1,335 @@
+---
+title: "No Pot of Gold at the End of the Rainbow"
+output: word_document
+date: "June 5, 2016"
+subtitle: Can we forecast gold prices using classical time series models?
+---
+
+This work project was developed by Dário Soares (m2015315@novaims.unl.pt), Francisco Lourenço (m2015187@novaims.unl.pt), Hugo Ricardo (m2015343@novaims.unl.pt) and Ricardo Dias (m2015058@novaims.unl.pt)
+
+# Background
+
+```{r}
+
+```
+
+# Methodology
+
+```{r, comment=NA }
+
+```
+
+```{r, message=F, echo=F, warning=F}
+# load libraries
+library(fGarch)
+library(tseries)
+library(forecast)
+library(fpp)
+```
+
+# Data
+
+Describe the data...
+
+```{r, comment=NA }
+# Load data
+gold <- read.csv("project_gold_gld_daily.txt",header=F, sep=",", as.is=TRUE, skip=54, col.names = c("Date", "Value"))
+
+# Set as time-series
+gold.ts0 <- ts(gold$Value)
+
+# Remove last 6 observations
+gold.ts <- head(gold.ts0,-6)
+length(gold.ts0)
+length(gold.ts)
+```
+
+# Exploratory Analysis
+
+## Stationarity
+
+We started by plotting the original time series of Gold ETF prices in USD.
+
+```{r, comment=NA }
+plot.ts(gold.ts, main="Gold ETF Prices (Daily)")
+
+```
+
+The time series *is not* weakly stationary as the level and variance change over time. Because of this we cannot apply directly the Box-Jenkins methodology, so we will evaluate if first differences are sufficient to turn the time series stationary.
+
+```{r, comment=NA }
+gold.dif <- diff(gold.ts)
+plot.ts(gold.dif, main="Gold ETF Prices (Daily Differences)")
+```
+
+Although the result can be considered adequate concerning the level stationarity, issues regarding [MORE] variance remain. Therefore, we will apply a log transformation [MORE] and a subsequent first difference. 
+
+```{r, comment=NA }
+gold.dif.log <- diff(log(gold.ts))
+plot.ts(gold.dif.log, main="Gold ETF Prices (Daily Differences of Log(Prices))")
+```
+
+Unfortunately the log transformation did not overcome the variance issues. Later on we will try to fit a GARCH model. For now, we will follow a pragmatic approach: we will try to fit an ARIMA  model nonetheless and evaluate at the end the temporal structure of the residuals.
+
+## Seasonality
+
+Theoretically seasonality should not be presented in a financial time series as it would mean an arbritrage edge. 
+
+## ARIMA
+
+```{r, comment=NA }
+tsdisplay(gold.dif.log)
+Acf(gold.dif.log, plot = FALSE)
+Pacf(gold.dif.log, plot = FALSE)
+```
+
+
+```{r, comment=NA }
+gold.log <- log(gold.ts)
+auto.arima(gold.log)
+# ARIMA(0,1,0) with drift  
+# Random walk 
+
+```
+
+
+```{r}
+Box.test(gold.dif.log, lag = 20, type = "Ljung-Box")
+```
+
+p-value = 0.4783
+ There is no well defined temporal structure in the transformed data(gold.dif.log)
+ The auto.arima points to a random walk. The Ljung-Box test
+ applied to the transformed data does not reject the 
+ null, with a p-value of 0.4783. 
+ Given these assertions we will fit a linear model to the transformed data
+ with only the intercept in order to impose a zero mean series. Then we will
+ analyse the ACF and PACF of the linear model residuals and decide for
+ a GARCH case.
+ 
+ 
+```{r}
+fitlin <- Arima(gold.dif.log, order = c(0,0,0))
+summary(fitlin)
+```
+
+The intercept is statisticaly significant for a 5% error type I.
+We will try to fit a Arch/Garch as it follows
+
+log(yt) - log(yt-1) = beta0 + epsilon
+
+or
+
+Yt/yt-1 = e^(beta0 + epsilon)
+
+(nota: epsilon = arga)
+
+
+# ARCH-GARCH
+
+
+```{r}
+arga <- fitlin$residuals
+tsdisplay(arga, lag.max = 160)
+tsdisplay((arga)**2, lag.max = 160)
+```
+
+From the analysis of the ACF and PACF of the squares of the linear model residuals (arga) we conclude that there is a case for a changing variance over time. As the pattern is conducive to a ARMA model we will do a simulation with multiple GARCH models to assist us on the fit decision.
+
+| Model | AIC | Significance
+|------|-----|-----|
+| GARCH | 12 | 3 |
+| GARCH(1,1) | -6.096633  | YES | 
+| GARCH(1,0) | -5.944167 | ? | 
+| GARCH(2,0) | -5.971479 | ? | 
+| GARCH(3,0) | -5.996618 | ? | 
+| GARCH(4,0) | -6.014606 | ? | 
+| GARCH(5,0) | -6.025685 | ? | 
+| GARCH(6,0) | -6.050757 | ? | 
+| GARCH(2,1) | -6.095755 | ? | 
+| GARCH(3,1) | -6.094847  | ? | 
+| GARCH(4,1) | -6.093946  | ? | 
+| GARCH(5,1) | -6.093174  | ? | 
+| GARCH(6,1) | -6.092338 | ? | 
+| GARCH(1,2) | -6.095783  | ? | 
+| GARCH(1,3) | -6.094890 | ? | 
+| GARCH(1,4) | -6.094029  | ? | 
+| GARCH(1,5) | -6.093382 | ? | 
+| GARCH(1,6) | -6.092544 | ? | 
+| GARCH(2,2) | -6.096449  | ? | 
+| GARCH(2,3) | -6.095632 | ? | 
+| GARCH(2,4) | -6.094740 | ? | 
+| GARCH(2,5) | -6.094125 | ? | 
+| GARCH(2,6) | -6.093348 | ? | 
+| GARCH(3,2) | -6.095585 | ? | 
+| GARCH(3,3) | -6.094197 | ? | 
+| GARCH(3,4) | -6.093292 | ? | 
+| GARCH(3,5) | -6.093531 | ? |
+| GARCH(3,6) | -6.092720 | ? |
+| GARCH(4,2) | -6.094991 | ? |
+| GARCH(4,3) | -6.093292  | ? |
+| GARCH(4,4) | -6.093847 | ? |
+| GARCH(4,5) |  -6.093599  | ? |
+| GARCH(4,6) | -6.092924  | ? |
+| GARCH(5,2) | -6.094174  | ? |
+| GARCH(5,3) | -6.092448  | ? |
+| GARCH(5,4) | -6.093027  | ? |
+| GARCH(5,5) | -6.093050 | ? |
+| GARCH(5,6) | -6.092220  | ? |
+| GARCH(6,2) | -6.093563  | ? |
+| GARCH(6,3) | -6.093281 | ? |
+| GARCH(6,4) | -6.093205 | ? |
+| GARCH(6,5) | -6.093205  | ? |
+| GARCH(6,6) | -6.093019  | ? |
+
+From this simulation we concluded the est model was a garch(1,1), according to the parsimony principle
+
+FALTA: especificação do GARCH
+
+```{r}
+gfit <- garchFit(~garch(1,1), arga, trace=F)
+summary(gfit)
+```
+
+The tests results were good excepted for normality. 
+The fit wasn't able to recover and capture the full extreme values dynamics. 
+Anyway we pragmatically will go to forecasting. 
+
+
+```{r}
+u <- gfit@sigma.t
+argaplusu <- arga+1.96*u
+argaminusu <- arga-1.96*u
+plot(arga)
+lines(argaplusu, lty= 2,col = 3)
+lines(argaminusu, lty= 2,col = 3)
+```
+
+```{r}
+x <- predict(gfit, n.ahead=6)
+str(x)
+x
+argaforecast <- x$meanForecast
+argaforecastplusu <- argaforecast + 1.96*(x$meanError)
+argaforecastminusu <- argaforecast - 1.96*(x$meanError)
+```
+
+
+
+```{r}
+# voltar aos valores iniciais
+# intercet no modelo fitlin fitlin$coef
+
+argaI<- arga + fitlin$coef
+argaplusuI<-argaplusu + fitlin$coef
+argaminusuI<-argaminusu + fitlin$coef
+
+argaforecastI <- argaforecast + fitlin$coef
+argaforecastplusuI<- argaforecastplusu  + fitlin$coef
+argaforecastminusuI<- argaforecastminusu  + fitlin$coef
+
+gold.ts.1 <- head(gold.ts,-1)
+gold.ts.arga<- (exp(argaI))*gold.ts.1
+gold.ts.argaplusu<- (exp(argaplusuI))*gold.ts.1
+gold.ts.argaminusu<- (exp(argaminusuI))*gold.ts.1
+
+
+gold.ts.argaforecast1<- (exp(argaforecastI[1]))*gold.ts[length(gold.ts)]
+gold.ts.argaforecast2<- (exp(argaforecastI[2]))*gold.ts.argaforecast1
+gold.ts.argaforecast3<- (exp(argaforecastI[3]))*gold.ts.argaforecast2
+gold.ts.argaforecast4<- (exp(argaforecastI[4]))*gold.ts.argaforecast3
+gold.ts.argaforecast5<- (exp(argaforecastI[5]))*gold.ts.argaforecast4
+gold.ts.argaforecast6<- (exp(argaforecastI[6]))*gold.ts.argaforecast5
+gold.ts.argaforecast <-c(gold.ts.argaforecast1,gold.ts.argaforecast2,gold.ts.argaforecast3,gold.ts.argaforecast4,gold.ts.argaforecast5,gold.ts.argaforecast6)
+
+
+
+gold.ts.argaforecastplusu1<- (exp(argaforecastplusuI[1]))*gold.ts[length(gold.ts)]
+gold.ts.argaforecastplusu2<- (exp(argaforecastplusuI[2]))*gold.ts.argaforecastplusu1
+gold.ts.argaforecastplusu3<- (exp(argaforecastplusuI[3]))*gold.ts.argaforecastplusu2
+gold.ts.argaforecastplusu4<- (exp(argaforecastplusuI[4]))*gold.ts.argaforecastplusu3
+gold.ts.argaforecastplusu5<- (exp(argaforecastplusuI[5]))*gold.ts.argaforecastplusu4
+gold.ts.argaforecastplusu6<- (exp(argaforecastplusuI[6]))*gold.ts.argaforecastplusu5
+gold.ts.argaforecastplusu <- c(gold.ts.argaforecastplusu1, gold.ts.argaforecastplusu2, gold.ts.argaforecastplusu3, gold.ts.argaforecastplusu4, gold.ts.argaforecastplusu5, gold.ts.argaforecastplusu6)
+
+
+
+gold.ts.argaforecastminusu1<- (exp(argaforecastminusuI[1]))*gold.ts[length(gold.ts)]
+gold.ts.argaforecastminusu2<- (exp(argaforecastminusuI[2]))*gold.ts.argaforecastminusu1
+gold.ts.argaforecastminusu3<- (exp(argaforecastminusuI[3]))*gold.ts.argaforecastminusu2
+gold.ts.argaforecastminusu4<- (exp(argaforecastminusuI[4]))*gold.ts.argaforecastminusu3
+gold.ts.argaforecastminusu5<- (exp(argaforecastminusuI[5]))*gold.ts.argaforecastminusu4
+gold.ts.argaforecastminusu6<- (exp(argaforecastminusuI[6]))*gold.ts.argaforecastminusu5
+gold.ts.argaforecastminusu <- c(gold.ts.argaforecastminusu1, gold.ts.argaforecastminusu2, gold.ts.argaforecastminusu3, gold.ts.argaforecastminusu4, gold.ts.argaforecastminusu5, gold.ts.argaforecastminusu6)
+
+
+plot(gold.ts)
+lines(gold.ts.arga, lty= 2,col = 3)
+lines(gold.ts.argaplusu, lty= 2,col = 4)
+lines(gold.ts.argaminusu, lty= 2,col = 4)
+lines(c(gold.ts, gold.ts.argaforecast), lty= 2, col = 5)
+
+```
+
+
+
+
+
+# Exponential Smoothing Forecast
+
+Em baixo tentámos modelar a nossa séries e fazer previsões recorrendo ao alisamento exponencial.
+Logo à partida, decidimos não utilizar o método de alisamento exponencial simples, uma vez que a nossa série é caracterizada por ter tendência e não sazonalidade.
+
+Os métodos de alisamento mais indicados serão portanto o Holt's Linear Trend, Holt's Exponential, Damped Linear Trend e,  Damped Exponential Trend.
+
+
+```{r}
+fit1<-holt(gold.ts, h=6)
+fit2<-holt(gold.ts, initial='optimal', exponential=TRUE, h=6)
+fit3<-holt(gold.ts, initial='optimal', damped=TRUE, h=6)
+fit4<-holt(gold.ts, initial='optimal', exponential=TRUE, damped=TRUE, h=6)
+```
+
+
+
+```{r}
+#AIC Results
+AIC(fit1$model)
+AIC(fit2$model)
+AIC(fit3$model)
+AIC(fit4$model)
+```
+
+```{r}
+#GRAPHICS (seria melhor se focasse o periodo de 2015,5 a 2016,5 - n consegui)
+plot(gold.ts, ylab="Gold Prices (corrigir titulo)", xlab="Month", 
+     fcol="black", plot.conf=FALSE)
+lines(fitted(fit1), col="blue")
+lines(fitted(fit2), col="red")
+lines(fitted(fit3), col="green")
+lines(fitted(fit4), col="pink")
+lines(fit1$mean, col="blue")
+lines(fit2$mean, col="red")
+lines(fit3$mean, col="green")
+lines(fit4$mean, col="pink")
+legend("topleft", lty=1, col=c("black","blue","red","green","pink"),
+       c("Series", "Holt's Linear", "Holt's Exponential","Damped Trend","Exponential Damp. Trend"))
+
+
+```
+
+```{r}
+#Forecasts (para calcular Erro de previsão dos modelos)
+fit1$mean
+fit2$mean
+fit3$mean
+fit4$mean
+```
+
+
+Segundo o AIC o melhor modelo para a nossa série é o Holt's Exponential.
+Este modelo é mais adequado para séries com tendência e sem sazonalidade como é o caso da nossa.
+Resta comprovar se o erro de previsão do modelo Holt's Exponential é menor do que o do modelo Damped Exponential Trend cujo AIC foi o segundo mais baixo.
+
+
+

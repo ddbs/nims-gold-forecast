@@ -18,28 +18,23 @@ library(fGarch)
 library(tseries)
 library(forecast)
 library(fpp)
-library(xts)
-
 ```
 
 # Data
 
 ```{r, comment=NA }
-gold <- read.csv("project_gold_gld_daily.txt", 
-                 header=F, sep=",", as.is=TRUE, skip=54, col.names = c("Date", "Value"))
+# Load data
+gold <- read.csv("project_gold_gld_daily.txt",header=F, sep=",", as.is=TRUE, skip=54, col.names = c("Date", "Value"))
 
-str(gold)
-head(gold)
-tail(gold)
-summary(gold)
+# Set as time-series
+gold.ts0 <- ts(gold$Value)
 
-#gold.ts <- ts(gold[,2], start=c(2005, 02, 04), frequency=365.25)
+# Remove last 6 observations
+gold.ts <- head(gold.ts0,-6)
+length(gold.ts0)
+length(gold.ts)
 
-# set gold as a xts object (for plots with dates)
-gold.xts <- xts(gold, order.by=as.POSIXct(gold$Date), frequency=365)
 
-# set gold as a time series object
-gold.ts <- ts(gold$Value)
 ```
 
 ### Original time series
@@ -150,8 +145,22 @@ garch.fit <- garchFit(formula=~garch(2,2), data=diff(log(gold.ts)), trace=FALSE)
 summary(garch.fit)
 ```
 
+# ARMA-GARCH
 
+```{r, comment=NA }
+fit <- garchFit(formula=~arma(1,0)+garch(1,1), data=diff(log(gold.ts)), trace=F)
+summary(fit)
+```
 
+```{r, comment=NA }
+fit <- garchFit(formula=~arma(1,1)+garch(1,1), data=diff(log(gold.ts)), trace=F)
+summary(fit)
+```
+
+```{r, comment=NA }
+fit <- garchFit(formula=~arma(0,1)+garch(1,1), data=diff(log(gold.ts)), trace=F)
+summary(fit)
+```
 
 
 

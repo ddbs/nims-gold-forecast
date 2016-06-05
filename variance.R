@@ -3,6 +3,7 @@ source("load.R")
 library(fGarch)
 library(tseries)
 
+gold.trans <- diff(log(gold.ts))
 
 # If the volatility clustering is properly explained by the model, then there 
 # will be no autocorrelation in the squared standardized residuals.  
@@ -10,13 +11,14 @@ library(tseries)
 
 ## sizing-up potential heteroscedasticity
 ##ACF/PACF/Box-Test - valid for variances?
-squares <- diff(gold.ts)^2
+squares <- gold.trans^2
 tsdisplay(squares)
 Box.test(squares, 20, 'Ljung-Box')
 
 # model with no ARMA process, and ARCH(1)
-garch.fit.1 <- garchFit(formula=~garch(2,0), data=gold.trans, trace=FALSE)  
+garch.fit.1 <- garchFit(formula=~garch(1,0), data=gold.trans, trace=FALSE)  
 summary(garch.fit.1)
+
 plot(garch.fit.1)
 
 # model with no ARMA process, and ARCH(2)
@@ -30,7 +32,7 @@ summary(garch.fit.3)
 plot(garch.fit.3)
 
 # model with an ARMA(1,1) process, and GARCH(1,1)
-garch.fit.4 <- garchFit(formula=~arma(1,1)+garch(1,0), data=gold.trans, trace=FALSE)  
+garch.fit.4 <- garchFit(formula=~arma(1,0)+garch(1,1), data=gold.trans, trace=FALSE)  
 summary(garch.fit.4)
 plot(garch.fit.4)
 

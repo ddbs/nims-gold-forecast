@@ -1,6 +1,6 @@
 ---
 title: "No Pot of Gold at the End of the Rainbow"
-output: word_document
+output: html_document
 date: "June 5, 2016"
 subtitle: Can we forecast gold prices using classical time series models?
 ---
@@ -25,6 +25,7 @@ library(fGarch)
 library(tseries)
 library(forecast)
 library(fpp)
+library(ggplot2)
 ```
 
 # Data
@@ -191,10 +192,7 @@ gfit <- garchFit(~garch(1,1), arga, trace=F)
 summary(gfit)
 ```
 
-The tests results were good excepted for normality. 
-The fit wasn't able to recover and capture the full extreme values dynamics. 
-Anyway we pragmatically will go to forecasting. 
-
+The tests results were good excepted for normality. The fit wasn't able to recover and capture the full extreme values dynamics. Anyway we pragmatically will go to forecasting. 
 
 ```{r}
 u <- gfit@sigma.t
@@ -214,26 +212,27 @@ argaforecastplusu <- argaforecast + 1.96*(x$meanError)
 argaforecastminusu <- argaforecast - 1.96*(x$meanError)
 ```
 
-
-
 ```{r}
 # voltar aos valores iniciais
 # intercet no modelo fitlin fitlin$coef
 
+# ??? C1
 argaI<- arga + fitlin$coef
 argaplusuI<-argaplusu + fitlin$coef
 argaminusuI<-argaminusu + fitlin$coef
 
+# ??? C2
 argaforecastI <- argaforecast + fitlin$coef
 argaforecastplusuI<- argaforecastplusu  + fitlin$coef
 argaforecastminusuI<- argaforecastminusu  + fitlin$coef
 
+# ??? C3
 gold.ts.1 <- head(gold.ts,-1)
 gold.ts.arga<- (exp(argaI))*gold.ts.1
 gold.ts.argaplusu<- (exp(argaplusuI))*gold.ts.1
 gold.ts.argaminusu<- (exp(argaminusuI))*gold.ts.1
 
-
+# ??? C4
 gold.ts.argaforecast1<- (exp(argaforecastI[1]))*gold.ts[length(gold.ts)]
 gold.ts.argaforecast2<- (exp(argaforecastI[2]))*gold.ts.argaforecast1
 gold.ts.argaforecast3<- (exp(argaforecastI[3]))*gold.ts.argaforecast2
@@ -242,8 +241,7 @@ gold.ts.argaforecast5<- (exp(argaforecastI[5]))*gold.ts.argaforecast4
 gold.ts.argaforecast6<- (exp(argaforecastI[6]))*gold.ts.argaforecast5
 gold.ts.argaforecast <-c(gold.ts.argaforecast1,gold.ts.argaforecast2,gold.ts.argaforecast3,gold.ts.argaforecast4,gold.ts.argaforecast5,gold.ts.argaforecast6)
 
-
-
+# ??? C5
 gold.ts.argaforecastplusu1<- (exp(argaforecastplusuI[1]))*gold.ts[length(gold.ts)]
 gold.ts.argaforecastplusu2<- (exp(argaforecastplusuI[2]))*gold.ts.argaforecastplusu1
 gold.ts.argaforecastplusu3<- (exp(argaforecastplusuI[3]))*gold.ts.argaforecastplusu2
@@ -252,8 +250,7 @@ gold.ts.argaforecastplusu5<- (exp(argaforecastplusuI[5]))*gold.ts.argaforecastpl
 gold.ts.argaforecastplusu6<- (exp(argaforecastplusuI[6]))*gold.ts.argaforecastplusu5
 gold.ts.argaforecastplusu <- c(gold.ts.argaforecastplusu1, gold.ts.argaforecastplusu2, gold.ts.argaforecastplusu3, gold.ts.argaforecastplusu4, gold.ts.argaforecastplusu5, gold.ts.argaforecastplusu6)
 
-
-
+# ??? C6
 gold.ts.argaforecastminusu1<- (exp(argaforecastminusuI[1]))*gold.ts[length(gold.ts)]
 gold.ts.argaforecastminusu2<- (exp(argaforecastminusuI[2]))*gold.ts.argaforecastminusu1
 gold.ts.argaforecastminusu3<- (exp(argaforecastminusuI[3]))*gold.ts.argaforecastminusu2
@@ -262,16 +259,33 @@ gold.ts.argaforecastminusu5<- (exp(argaforecastminusuI[5]))*gold.ts.argaforecast
 gold.ts.argaforecastminusu6<- (exp(argaforecastminusuI[6]))*gold.ts.argaforecastminusu5
 gold.ts.argaforecastminusu <- c(gold.ts.argaforecastminusu1, gold.ts.argaforecastminusu2, gold.ts.argaforecastminusu3, gold.ts.argaforecastminusu4, gold.ts.argaforecastminusu5, gold.ts.argaforecastminusu6)
 
+#plot(gold.ts)
+#lines(gold.ts.arga, lty= 2,col = 3)
+#lines(gold.ts.argaplusu, lty= 2,col = 4)
+#lines(gold.ts.argaminusu, lty= 2,col = 4)
+#lines(c(gold.ts, gold.ts.argaforecast), lty= 2, col = 5)
 
-plot(gold.ts)
-lines(gold.ts.arga, lty= 2,col = 3)
-lines(gold.ts.argaplusu, lty= 2,col = 4)
-lines(gold.ts.argaminusu, lty= 2,col = 4)
-lines(c(gold.ts, gold.ts.argaforecast), lty= 2, col = 5)
+# prepare data for plots
+x.lagged <- tail(gold.ts,-1) #remove first observation
+x.series <- tail(x.lagged,6)
+x.arga <- tail(gold.ts.arga,6)
+x.argaplusu <- tail(gold.ts.argaplusu, 6)
+x.argaminusu <- tail(gold.ts.argaminusu, 6)
+
+# prepare dataframe for ggplot2
+x.t <- c(1,2,3,4,5,6)
+x.bind <- as.data.frame(cbind(x.t, x.series, x.arga, x.argaplusu, x.argaminusu))
+x.bind
 
 ```
 
-
+```{r}
+# plot forecasts
+ggplot(x.bind, aes(x.t)) + 
+  geom_line(aes(y=x.arga), colour="blue") + 
+  geom_line(aes(y=x.argaplusu), colour="red") + 
+  geom_line(aes(y=x.argaminusu), colour="red") 
+```
 
 
 
@@ -282,7 +296,6 @@ Logo à partida, decidimos não utilizar o método de alisamento exponencial sim
 
 Os métodos de alisamento mais indicados serão portanto o Holt's Linear Trend, Holt's Exponential, Damped Linear Trend e,  Damped Exponential Trend.
 
-
 ```{r}
 fit1<-holt(gold.ts, h=6)
 fit2<-holt(gold.ts, initial='optimal', exponential=TRUE, h=6)
@@ -290,46 +303,48 @@ fit3<-holt(gold.ts, initial='optimal', damped=TRUE, h=6)
 fit4<-holt(gold.ts, initial='optimal', exponential=TRUE, damped=TRUE, h=6)
 ```
 
-
-
-```{r}
-#AIC Results
-AIC(fit1$model)
-AIC(fit2$model)
-AIC(fit3$model)
-AIC(fit4$model)
-```
-
-```{r}
-#GRAPHICS (seria melhor se focasse o periodo de 2015,5 a 2016,5 - n consegui)
-plot(gold.ts, ylab="Gold Prices (corrigir titulo)", xlab="Month", 
-     fcol="black", plot.conf=FALSE)
-lines(fitted(fit1), col="blue")
-lines(fitted(fit2), col="red")
-lines(fitted(fit3), col="green")
-lines(fitted(fit4), col="pink")
-lines(fit1$mean, col="blue")
-lines(fit2$mean, col="red")
-lines(fit3$mean, col="green")
-lines(fit4$mean, col="pink")
-legend("topleft", lty=1, col=c("black","blue","red","green","pink"),
-       c("Series", "Holt's Linear", "Holt's Exponential","Damped Trend","Exponential Damp. Trend"))
-
-
-```
-
-```{r}
-#Forecasts (para calcular Erro de previsão dos modelos)
-fit1$mean
-fit2$mean
-fit3$mean
-fit4$mean
-```
-
-
 Segundo o AIC o melhor modelo para a nossa série é o Holt's Exponential.
 Este modelo é mais adequado para séries com tendência e sem sazonalidade como é o caso da nossa.
 Resta comprovar se o erro de previsão do modelo Holt's Exponential é menor do que o do modelo Damped Exponential Trend cujo AIC foi o segundo mais baixo.
+
+```{r}
+par(mfrow=c(2,2))
+plot(tail(gold.ts,20), main= paste("Holt's Linear"," AIC=", round(AIC(fit1$model),1)), 
+     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
+lines(tail(fitted(fit1),20), col="cyan")
+plot(tail(gold.ts,20), main= paste("Holt's Exponential"," AIC=", round(AIC(fit2$model),1)), 
+     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
+lines(tail(fitted(fit2),20), col="blue")
+plot(tail(gold.ts,20), main= paste("Damped Trend"," AIC=", round(AIC(fit3$model),1)), 
+     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
+lines(tail(fitted(fit3),20), col="green")
+plot(tail(gold.ts,20), main= paste("Exponential Damped Trend"," AIC=", round(AIC(fit4$model),1)), 
+     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
+lines(tail(fitted(fit4),20), col="red")
+```
+
+
+
+
+```{r}
+# plot forecasts
+par(mfrow=c(1,1))
+plot(fit1$mean, col="cyan", xlab="Days", ylab="Prices", main="Sample Forecasts (next 6 days)")
+par(new=T)
+plot(fit2$mean, col="blue", xlab="", ylab="", axes=F)
+par(new=T)
+plot(fit3$mean, col="green", xlab="", ylab="", axes=F)
+par(new=T)
+plot(fit4$mean, col="red", xlab="", ylab="", axes=F)
+legend("topleft", lty=1, col=c("cyan","blue","green","red"),
+       c("Holt's Linear", "Holt's Exponential","Damped Trend","Exponential Damped Trend"), cex = 1)
+```
+
+# Discussion
+
+# References
+
+TODO: DARIO
 
 
 

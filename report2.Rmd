@@ -15,6 +15,9 @@ This work project was developed by Dário Soares (m2015315@novaims.unl.pt), Fran
 
 # Methodology
 
+We have extracted a time series of gold etf from https://www.quandl.com and we took off the last six observations so we could have a reference to our predictions accuracy. We have attempted to forecast them using the following forecasting methods: ARIMA, Exponential Smoothing and ARCH and GARCH. In order to build an ARIMA model we analysed the time series stationarity, made some fine tuning transformations, analysed the ACF and PACF plots and finally we did the Box-Ljung test to confirm if our time series has sufficient temporal structure for the application of ARIMA.  After concluding that we couldn’t apply an ARIMA Model we went for an ARCH and GARCH models. We fit an ARIMA(0,0,0) to impose a zero mean series and analysed the ACF and PACF plot of the linear model residuals, also squared. We decided that the GARCH model was the one we should use has there was changing variance over time. With the aim of finding the best fit we simulated multiple GARCH(r,s) models with “r” and “s” up to six. We found that the GARCH(1,1) was the best fit, as usual it is for financial time series. We proceed with the forecast of the last six observation with the fitted data and made the necessary transformations to get back to the real scale. The last forecasting methods we used were the Exponential Smoothing Forecast for trended series has it is ours. Therefore we made one simulation for each one of the following methods: Holt’s Linear Trend method, Exponential Trend, Damped Trend and Damped Exponential Trend with optimal smoothing parameters estimation.  Finally we discussed the forecast results from the best achieved models.   
+
+
 ```{r, comment=NA }
 
 ```
@@ -26,6 +29,7 @@ library(tseries)
 library(forecast)
 library(fpp)
 library(ggplot2)
+library(Hmisc)
 ```
 
 # Data
@@ -233,22 +237,50 @@ gold.ts.argaplusu<- (exp(argaplusuI))*gold.ts.1
 gold.ts.argaminusu<- (exp(argaminusuI))*gold.ts.1
 
 # ??? C4
-gold.ts.argaforecast1<- (exp(argaforecastI[1]))*gold.ts[length(gold.ts)]
-gold.ts.argaforecast2<- (exp(argaforecastI[2]))*gold.ts.argaforecast1
-gold.ts.argaforecast3<- (exp(argaforecastI[3]))*gold.ts.argaforecast2
-gold.ts.argaforecast4<- (exp(argaforecastI[4]))*gold.ts.argaforecast3
-gold.ts.argaforecast5<- (exp(argaforecastI[5]))*gold.ts.argaforecast4
-gold.ts.argaforecast6<- (exp(argaforecastI[6]))*gold.ts.argaforecast5
+gold.ts.argaforecast1<- (exp(argaforecastI[1]))*gold.ts[length(gold.ts)-7]
+gold.ts.argaforecast2<- (exp(argaforecastI[2]))*gold.ts[length(gold.ts)-6]
+gold.ts.argaforecast3<- (exp(argaforecastI[3]))*gold.ts[length(gold.ts)-5]
+gold.ts.argaforecast4<- (exp(argaforecastI[4]))*gold.ts[length(gold.ts)-4] 
+gold.ts.argaforecast5<- (exp(argaforecastI[5]))*gold.ts[length(gold.ts)-3] 
+gold.ts.argaforecast6<- (exp(argaforecastI[6]))*gold.ts[length(gold.ts)-2] 
+gold.ts.argaforecast7<- (exp(argaforecastI[7]))*gold.ts[length(gold.ts)-1] #???
 gold.ts.argaforecast <-c(gold.ts.argaforecast1,gold.ts.argaforecast2,gold.ts.argaforecast3,gold.ts.argaforecast4,gold.ts.argaforecast5,gold.ts.argaforecast6)
 
+# replace above code
+f.argaforecast <- function(n){
+  for(i in 1:n){
+    x.arga[i] <- (exp(argaforecastI[i]))*gold.ts[length(gold.ts)-(n+2-i)]
+    return(x.arga)
+  }
+}
+test <- f.argaforecast(6)
+test
+
+
 # ??? C5
-gold.ts.argaforecastplusu1<- (exp(argaforecastplusuI[1]))*gold.ts[length(gold.ts)]
+gold.ts.argaforecastplusu1<- (exp(argaforecastplusuI[1]))*gold.ts[length(gold.ts)]  # ???
 gold.ts.argaforecastplusu2<- (exp(argaforecastplusuI[2]))*gold.ts.argaforecastplusu1
 gold.ts.argaforecastplusu3<- (exp(argaforecastplusuI[3]))*gold.ts.argaforecastplusu2
 gold.ts.argaforecastplusu4<- (exp(argaforecastplusuI[4]))*gold.ts.argaforecastplusu3
 gold.ts.argaforecastplusu5<- (exp(argaforecastplusuI[5]))*gold.ts.argaforecastplusu4
 gold.ts.argaforecastplusu6<- (exp(argaforecastplusuI[6]))*gold.ts.argaforecastplusu5
 gold.ts.argaforecastplusu <- c(gold.ts.argaforecastplusu1, gold.ts.argaforecastplusu2, gold.ts.argaforecastplusu3, gold.ts.argaforecastplusu4, gold.ts.argaforecastplusu5, gold.ts.argaforecastplusu6)
+
+# replace above code
+f.argaforecastplusu <- function(n){
+  for(i in 1:n){
+    if(i==1){
+      x.argaforecastplusu[i] <- gold.ts[length(gold.ts)]
+    }
+    else {
+      x.argaforecastplusu[i] <- x.argaforecastplusu[i-1]
+    }
+    x.arga[i] <- (exp(argaforecastI[i]))*x[length(x)-(n+2-i)]
+    return(x.arga)
+  }
+}
+test <- f.argaforecast(gold.ts, 6)
+test
 
 # ??? C6
 gold.ts.argaforecastminusu1<- (exp(argaforecastminusuI[1]))*gold.ts[length(gold.ts)]
@@ -266,7 +298,7 @@ gold.ts.argaforecastminusu <- c(gold.ts.argaforecastminusu1, gold.ts.argaforecas
 #lines(c(gold.ts, gold.ts.argaforecast), lty= 2, col = 5)
 
 # prepare data for plots
-x.lagged <- tail(gold.ts,-1) #remove first observation
+x.lagged <- Lag(gold.ts, shift = 1)
 x.series <- tail(x.lagged,6)
 x.arga <- tail(gold.ts.arga,6)
 x.argaplusu <- tail(gold.ts.argaplusu, 6)
@@ -279,6 +311,33 @@ x.bind
 
 ```
 
+
+```{r}
+#É necessário plotar o histórico da série a partir de:
+#gold.ts sem a primeira observação;gold.ts.arga;gold.ts.argaplusu;gold.ts.argaminusu. Para controlo há que ter #em atenção que o gold.ts sem a primeira observação deverá coincidir com o gold.ts.arga se desfasarmos um #periodo (gold.ts[1]=gold.ts.arga[2]).
+
+# remove first observation and confirm
+gold.ts.m1 <- gold.ts[2:length(gold.ts)] 
+cbind(tail(gold.ts), tail(gold.ts.m1), tail(gold.ts.arga))
+cbind(head(gold.ts), head(gold.ts.m1), head(gold.ts.arga))
+length(gold.ts)
+length(gold.ts.m1)
+length(gold.ts.arga)
+
+# plot
+g.bind <- as.data.frame(cbind(gold.ts.m1, gold.ts.arga, gold.ts.argaplusu, gold.ts.argaminusu))
+g.t <- c(1:length(gold.ts.m1))
+g <- ggplot(g.bind, aes(g.t)) + 
+  geom_line(aes(y=gold.ts.m1), colour="blue") + 
+  geom_line(aes(y=gold.ts.arga), colour="cyan") + 
+  geom_line(aes(y=gold.ts.argaplusu), colour="gray") + 
+  geom_line(aes(y=gold.ts.argaminusu), colour="gray")
+g + theme_bw()
+
+```
+
+
+
 ```{r}
 # plot forecasts
 p <- ggplot(x.bind, aes(x.t)) + 
@@ -288,14 +347,12 @@ p <- ggplot(x.bind, aes(x.t)) +
 p + theme_bw()  
 ```
 
-
-
 # Exponential Smoothing Forecast
 
-Em baixo tentámos modelar a nossa séries e fazer previsões recorrendo ao alisamento exponencial.
-Logo à partida, decidimos não utilizar o método de alisamento exponencial simples, uma vez que a nossa série é caracterizada por ter tendência e não sazonalidade.
+Next, we try to model and forecast by applying exponential smoothing methods. We skip the Simple Exponential Smoothing method as our time series has a trend but no seasonality. The most suitable methods are consequently: Holt’s Linear Trend, Exponential Trend, Damped Linear Trend e, Damped Exponential Trend.
 
-Os métodos de alisamento mais indicados serão portanto o Holt's Linear Trend, Holt's Exponential, Damped Linear Trend e,  Damped Exponential Trend.
+We use the “optimal” setting to automatically estimate the exponential smoothing parameters that minimize the sum-squared residuals. 
+
 
 ```{r}
 fit1<-holt(gold.ts, h=6)
@@ -304,9 +361,15 @@ fit3<-holt(gold.ts, initial='optimal', damped=TRUE, h=6)
 fit4<-holt(gold.ts, initial='optimal', exponential=TRUE, damped=TRUE, h=6)
 ```
 
-Segundo o AIC o melhor modelo para a nossa série é o Holt's Exponential.
-Este modelo é mais adequado para séries com tendência e sem sazonalidade como é o caso da nossa.
-Resta comprovar se o erro de previsão do modelo Holt's Exponential é menor do que o do modelo Damped Exponential Trend cujo AIC foi o segundo mais baixo.
+```{r}
+#AIC Results
+AIC(fit1$model)
+AIC(fit2$model)
+AIC(fit3$model)
+AIC(fit4$model)
+```
+
+Analysing the AIS results of the fits, we verify that Exponential Trend method has the lowest one. However AIC results are not so different from each other and neither the forecast values.
 
 ```{r}
 par(mfrow=c(2,2))
@@ -324,8 +387,17 @@ plot(tail(gold.ts,20), main= paste("Exponential Damped Trend"," AIC=", round(AIC
 lines(tail(fitted(fit4),20), col="red")
 ```
 
+The forecast results show almost no variance against the last lag (118.70) which suggest that the parameter estimation for alpha and beta was conservative, attributing approximately all the weight to the most recent observations. We also suspect that the data set as too many observation for this method and therefore we run again Exponential Trend model to fit a sub-set with the last 180 lags.
 
+```{r}
+gold.ts.exp <- tail(gold.ts,180)
+```
 
+```{r}
+tail(gold.ts0,6)
+```
+
+We observe that the forecast values are closer to the real values of our time series than the ones that we obtained with a wider interval.
 
 ```{r}
 # plot forecasts

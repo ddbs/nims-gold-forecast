@@ -150,7 +150,6 @@ head(gfit@fitted)
 head(gfit@sigma.t)
 
 
-
 ################################################################################
 # reproducing model since the beginning
 ################################################################################
@@ -180,5 +179,22 @@ fitn <- fGarch::garchFit(~ arma(1,0) + garch(1,1), data=diff(log(gold.ts)) , tra
 predict(fitn, n.ahead = 2)
 # now we are forecasting the mean
 
+fitn <- fGarch::garchFit(~ arma(0,0) + garch(1,1), data =log(gold.ts) , trace =  FALSE)
+predict(fitn, n.ahead = 2)
+# the mean is still the same because we are using an arma(0,0)
+# i.e. it's the original series
+
 ########
+
+x <- c(1,2,3,4,5)
+
+
+det_hs<-hs-trend
+S<-c(rep(0,12))
+for (i in 1:12){
+  S[i]<-mean(det_hs[i+12*(1:12)])
+}
+
+
+
 

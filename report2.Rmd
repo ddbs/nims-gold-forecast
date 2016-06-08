@@ -336,14 +336,15 @@ fit4<-holt(gold.ts, initial='optimal', exponential=TRUE, damped=TRUE, h=6)
 ```
 
 ```{r}
-#AIC Results
-AIC(fit1$model)
-AIC(fit2$model)
-AIC(fit3$model)
-AIC(fit4$model)
+# AIC Results
+m.holt <- AIC(fit1$model)
+m.holt.exponential <- AIC(fit2$model)
+m.holt.damped<- AIC(fit3$model)
+m.holt.exp.damped <- AIC(fit4$model)
+cbind(m.holt, m.holt.exponential, m.holt.damped, m.holt.exp.damped)
 ```
 
-Analysing the AIS results of the fits, we verify that Exponential Trend method has the lowest one. However AIC results are not so different from each other and neither the forecast values.
+Analysing the AIC results of the fits, we verify that Exponential Trend method has the lowest one. However AIC results are not so different from each other and neither the forecast values.
 
 ```{r}
 par(mfrow=c(2,2))
@@ -393,7 +394,6 @@ legend("topleft", lty=1, col=c("black", "cyan","blue","green","red", "brown"),
        c("Series", "Holt's Linear", "Holt's Exponential","Damped Trend","Exponential Damped Trend", "Holt's Exponential 180d"), cex = 0.6)
 ```
 
-The forecast results show almost no variance against the last lag (118.70) which suggest that the parameter estimation for alpha and beta was conservative, attributing approximately all the weight to the most recent observations. We also suspect that the data set as too many observation for this method and therefore we run again Exponential Trend model to fit a sub-set with the last 180 lags.
 
 
 <br><br>

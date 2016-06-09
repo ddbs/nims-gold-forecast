@@ -1,28 +1,13 @@
 ---
 title: "No Pot of Gold at the End of the Rainbow"
-output: html_document
+output: 
+  html_document: 
+    toc: yes
 date: "June 5, 2016"
 subtitle: Can we forecast gold prices using classical time series models?
 ---
 
-This work project was developed by Dário Soares (m2015315@novaims.unl.pt), Francisco Lourenço (m2015187@novaims.unl.pt), Hugo Ricardo (m2015343@novaims.unl.pt) and Ricardo Dias (m2015058@novaims.unl.pt)
-
-WORK IN PROGRESS
-
-# Background
-
-```{r}
-
-```
-
-# Methodology
-
-We have extracted a time series of gold etf from https://www.quandl.com and we took off the last six observations so we could have a reference to our predictions accuracy. We have attempted to forecast them using the following forecasting methods: ARIMA, Exponential Smoothing and ARCH and GARCH. In order to build an ARIMA model we analysed the time series stationarity, made some fine tuning transformations, analysed the ACF and PACF plots and finally we did the Box-Ljung test to confirm if our time series has sufficient temporal structure for the application of ARIMA.  After concluding that we couldn’t apply an ARIMA Model we went for an ARCH and GARCH models. We fit an ARIMA(0,0,0) to impose a zero mean series and analysed the ACF and PACF plot of the linear model residuals, also squared. We decided that the GARCH model was the one we should use has there was changing variance over time. With the aim of finding the best fit we simulated multiple GARCH(r,s) models with “r” and “s” up to six. We found that the GARCH(1,1) was the best fit, as usual it is for financial time series. We proceed with the forecast of the last six observation with the fitted data and made the necessary transformations to get back to the real scale. The last forecasting methods we used were the Exponential Smoothing Forecast for trended series has it is ours. Therefore we made one simulation for each one of the following methods: Holt’s Linear Trend method, Exponential Trend, Damped Trend and Damped Exponential Trend with optimal smoothing parameters estimation.  Finally we discussed the forecast results from the best achieved models.
-
-
-```{r, comment=NA }
-
-```
+This work project was developed by Dário Soares, Francisco Lourenço, Hugo Ricardo and Ricardo Costa Mendes.
 
 ```{r, message=F, echo=F, warning=F}
 # load libraries
@@ -32,11 +17,16 @@ library(forecast)
 library(fpp)
 library(ggplot2)
 library(Hmisc)
+library(plotly)
 ```
 
-# Data
+# Introduction
 
-Describe the data...
+The objective of this project is to achieve an appropriate model to fit and forecast the gold ETF (GLD) daily prices in USD, an exchange traded fund listed in the NYSE, that replicates the physical price of gold.
+
+We have picked the methods learnt within the scope of the forecasting methods course, that seemed to be more suitable to recover the time series structure.
+
+The data was obtained from Quandl, for the period between 2004-11-18 and 2016-05-04, and it contains 2845 observations. The time series was loaded without reference to any time stamps, holidays or weekends.
 
 ```{r, comment=NA }
 # Load data
@@ -51,9 +41,27 @@ length(gold.ts0)
 length(gold.ts)
 ```
 
-# Exploratory Analysis
 
-## Stationarity
+# Methodology
+
+We have extracted a daily time series of gold ETF prices from Quandl and took off the last six observations for demonstrative purposes.
+
+Then we have attempted to model and forecast a time-series of daily prices of the Gold ETF (GLD) using the following forecasting methods: ARIMA, ARCH-GARCH and Exponential Smoothing.
+
+In order to build an ARIMA model we have analysed the time series’ stationarity, made some scale transformations, analysed the ACF and PACF plots and finally carried out the Ljung-Box test.
+
+After concluding that a simple ARIMA model could not be applied,  we modelled the volatility with ARCH and GARCH methods, analysing the ACF and PACF plots of the (squared) residuals.
+
+We simulated multiple GARCH(r,s) models, and selected the best using both the AIC and the parsimony principle. 
+
+We then proceeded to forecast six days forward and compare with the real data that was initially left out.
+
+Finally we applied a Exponential Smoothing forecast for trended series. For each of the following methods we made a simulation: Holt’s Linear Trend method, Exponential Trend, Damped Trend and Damped Exponential Trend with optimal smoothing parameters estimation.
+
+We conclude with a brief overview of the results.
+
+
+# Exploratory Analysis
 
 We started by plotting the original time series of Gold ETF prices in USD.
 
@@ -62,86 +70,75 @@ plot.ts(gold.ts, main="Gold ETF Prices (Daily)")
 
 ```
 
-The time series *is not* weakly stationary as the level and variance change over time. Because of this we cannot apply directly the Box-Jenkins methodology, so we will evaluate if first differences are sufficient to turn the time series stationary.
+Theoretically seasonality should not be present in a financial time series as it would mean an arbritrage edge.
+
+The time series does not seem to be stationary due to the presence of a trend. Because of this we cannot apply directly the Box-Jenkins methodology, so we will evaluate if first differences are sufficient to turn the time series stationary.
 
 ```{r, comment=NA }
 gold.dif <- diff(gold.ts)
 plot.ts(gold.dif, main="Gold ETF Prices (Daily Differences)")
 ```
 
-Although the result can be considered adequate concerning the level stationarity, issues regarding [MORE] variance remain. Therefore, we will apply a log transformation [MORE] and a subsequent first difference.
+The variance seems to change over time. Therefore, we will apply a logarithmic transformation and a subsequent first difference.
 
 ```{r, comment=NA }
 gold.dif.log <- diff(log(gold.ts))
 plot.ts(gold.dif.log, main="Gold ETF Prices (Daily Differences of Log(Prices))")
 ```
 
-Unfortunately the log transformation did not overcome the variance issues. Later on we will try to fit a GARCH model. For now, we will follow a pragmatic approach: we will try to fit an ARIMA  model nonetheless and evaluate at the end the temporal structure of the residuals.
+Unfortunately the differences of the logarithmic transformation did not overcome the variance issues. This suggests that an ARIMA-GARCH method is a better approach. 
 
-## Seasonality
-
-Theoretically seasonality should not be presented in a financial time series as it would mean an arbritrage edge.
-
-## ARIMA
+# ARIMA-GARCH
 
 ```{r, comment=NA }
+# ACF and PACF of the transformed series
 tsdisplay(gold.dif.log)
 Acf(gold.dif.log, plot = FALSE)
 Pacf(gold.dif.log, plot = FALSE)
 ```
 
-
 ```{r, comment=NA }
+# AutoArima
 gold.log <- log(gold.ts)
 auto.arima(gold.log)
-# ARIMA(0,1,0) with drift  
-# Random walk
-
 ```
 
 
 ```{r}
+# Ljung-Box test
 Box.test(gold.dif.log, lag = 20, type = "Ljung-Box")
 ```
 
-p-value = 0.4783
- There is no well defined temporal structure in the transformed data(gold.dif.log)
- The auto.arima points to a random walk. The Ljung-Box test
- applied to the transformed data does not reject the
- null, with a p-value of 0.4783.
- Given these assertions we will fit a linear model to the transformed data
- with only the intercept in order to impose a zero mean series. Then we will
- analyse the ACF and PACF of the linear model residuals and decide for
- a GARCH case.
+There is no well defined temporal structure in the transformed data (gold.dif.log).
 
+The Auto Arima points to a random walk.
+
+The Ljung-Box test applied to the transformed data does not reject the null hypothesis (inexistance of autocorrelations), with a p-value of 0.4783.
+
+Given these assertions we will fit a linear model to the transformed data with only the intercept in order to impose a zero mean series. 
+
+Then we will analyse the ACF and PACF of the linear model residuals and decide for a GARCH case.
 
 ```{r}
+# fit of the linear model with just an intercept
 fitlin <- Arima(gold.dif.log, order = c(0,0,0))
 summary(fitlin)
 ```
 
-The intercept is statisticaly significant for a 5% error type I.
-We will try to fit a Arch/Garch as it follows
+The intercept is statisticaly significant for a 5% error Type I. 
 
-log(yt) - log(yt-1) = beta0 + epsilon
+We will try to fit an ARCH-GARCH as it follows:
 
-or
-
-Yt/yt-1 = e^(beta0 + epsilon)
-
-(nota: epsilon = arga)
-
-
-# ARCH-GARCH
 
 
 ```{r}
+# analysis of the residuals
 arga <- fitlin$residuals
 tsdisplay(arga, lag.max = 160)
 tsdisplay((arga)**2, lag.max = 160)
 ```
 
-From the analysis of the ACF and PACF of the squares of the linear model residuals (arga) we conclude that there is a case for a changing variance over time. As the pattern is conducive to a ARMA model we will do a simulation with multiple GARCH models to assist us on the fit decision.
+From the analysis of the ACF and PACF of the squares of the linear model residuals (arga) we conclude that there is a case for a changing variance over time. As the pattern is conducive to an ARMA model we will do a simulation with multiple GARCH models to assist us on the fit decision.
 
 | Model | AIC | 
 |------|-----|
@@ -188,220 +185,181 @@ From the analysis of the ACF and PACF of the squares of the linear model residua
 | GARCH(6,5) | -6.093205 |
 | GARCH(6,6) | -6.093019 |
 
-From this simulation we concluded the est model was a garch(1,1), according to the parsimony principle
-
-As usual in financial time series the GARCH(1,1) was chosen.
-In fact, volatility tend to be higher if prices are higher (ARCH).
-But it also depends on the market sentiment that is by definion
-price uncorrelated (GARCH).
-
-FALTA: especificação do GARCH final
+From this simulation we conclude the best model is a GARCH(1,1).
 
 ```{r}
 gfit <- garchFit(~garch(1,1), arga, trace=F)
 summary(gfit)
 ```
 
-The tests results were good excepted for normality. The fit wasn't able to recover and capture the full extreme values dynamics. Anyway we pragmatically will go to forecasting.
+The tests results were good except for normality. The fit wasn't able to recover and capture the extreme values idiosyncrasy.
+
+We will go to forecasting and look at the final results.
 
 ```{r}
-u <- gfit@sigma.t
-argaplusu <- arga+1.96*u
-argaminusu <- arga-1.96*u
-plot(arga)
-lines(argaplusu, lty= 2,col = 3)
-lines(argaminusu, lty= 2,col = 3)
+u <- gfit@sigma.t  # conditional sd
+argaplusu <- arga + 1.96 * u
+argaminusu <- arga - 1.96 * u
+plot(arga, main="GARCH(1,1)")
+lines(argaplusu, lty= 2, col = 3)
+lines(argaminusu, lty= 2, col = 3)
 ```
 
-As we can see above the garch allowed to capture a significant part of the changing variance.
-The arga plot is indeed quite good.
-
-Insert text here...
+As we can see above, the GARCH(1,1) allowed to capture a significant part of the changing variance. The arga plot is indeed quite good.
 
 ```{r}
-### COMENTAR CODIGO
-x <- predict(gfit, n.ahead=6)
+# Forecast for 6 periods
+x <- predict(gfit, n.ahead = 6)
 x
 ```
 
-Insert text here...
-
 <br><br>
 
-# Insert title here...
+# Reversing the Transformations
 
-Insert some text here...
+Now we are going to reverse the transformations that we made on the original time series  (`(diff(log(gold.ts)))`).
 
 ```{r}
 # Back transformation
 # Intercept of fitlin is fitlin$coef
 
-# WHAT IS THIS?
 argaforecast <- x$meanForecast
 argaforecastplusu <- argaforecast + 1.96*(x$meanError)
 argaforecastminusu <- argaforecast - 1.96*(x$meanError)
 
-# WHAT IS THIS?
 argaI <- arga + fitlin$coef
 argaplusuI <- argaplusu + fitlin$coef
 argaminusuI <- argaminusu + fitlin$coef
 
-# WHAT IS THIS?
 argaforecastI <- argaforecast + fitlin$coef
 argaforecastplusuI<- argaforecastplusu  + fitlin$coef
 argaforecastminusuI<- argaforecastminusu  + fitlin$coef
 
-# WHAT IS THIS?
-n_ahead <- 6
-gold.ts.1 <- head(gold.ts,-1)  #?
-gold.ts.2 <- tail(gold.ts,(length(gold.ts)-2))  #?
-gold.ts.3 <- tail(gold.ts, n_ahead)  #?
-#gold.ts.3
+gold.ts.1 <- head(gold.ts,-1)  
+gold.ts.2 <- tail(gold.ts,(length(gold.ts)-2))
+gold.ts.3 <- tail(gold.ts0, 6)
 
-# WHAT IS THIS?
 gold.ts.arga<- (exp(argaI))*gold.ts.1
 gold.ts.argaplusu<- (exp(argaplusuI))*gold.ts.1
 gold.ts.argaminusu<- (exp(argaminusuI))*gold.ts.1
 
-# WHAT IS THIS?
-plot(gold.ts.2, type="l", main="Insert plot title")
-lines(gold.ts.arga, lty= 2,col = 3)
-lines(gold.ts.argaplusu, lty= 2, col = 4)
-lines(gold.ts.argaminusu, lty= 2, col = 4)
+par(mfrow=c(1,2))
+plot(gold.ts.2, type="l", main="Series (Since Inception)")
+lines(gold.ts.arga, lty= 2, col = "green")
+lines(gold.ts.argaplusu, lty= 2, col = "blue")
+lines(gold.ts.argaminusu, lty= 2, col = "blue")
+plot(tail(gold.ts.2,100), type="l", main="Series (Last 100 Obs)")
+lines(tail(gold.ts.arga,100), lty= 2,col = "green")
+lines(tail(gold.ts.argaplusu,100), lty= 2, col = "blue")
+lines(tail(gold.ts.argaminusu,100), lty= 2, col = "blue")
 ```
 
-The point forecast method is the naive case, given that there is
-no significant temporal structure in the time series. It gathers
-all characteristics of a random walk except for the homoskedasticity.
-The width of the confidence/forecast intervals vary over time due to
-the GARCH fit. These intervals are not symmetrical because of the
-back log transformation. 
+The point forecast method is the naive case, given that there is no significant temporal structure in the time series. It gathers all characteristics of a random walk except for the homoskedasticity. 
 
-The model should be tested in real time market
-in order to ascertain the return-risk profile of the following trading
-strategies:
-1)Sell when the price reaches the upper limit and buy
-when it reaches the lower limit.
-2)Buy when the upper limit is broken out and sell when
-the lower limit is broken out.
-
-#### Insert subtitle here
-
-Insert some text here...
+The width of the confidence/forecast intervals vary over time due to the GARCH fit. These intervals are not symmetrical because of the back logarithmic transformation. 
 
 ```{r}
-# custom forecast function - REPLACES OLD BIG CHUNK OF CODE
 f.argaforecast <- function(n, seriesx, series0, series1){
   x.arga <- c()
   for(i in 1:n){
-    x.arga[i] <- (exp(seriesx[i])) * series0[length(series1)]
+    x.arga[i] <- (exp(seriesx[i])) * series0[length(series1)+i-1]
   }
   x.arga
 }
 
-# WHAT IS THIS? 
-gold.ts.argaforecast <- ts(f.argaforecast(n_ahead, argaforecastI, gold.ts0, gold.ts))
-gold.ts.argaforecastplusu <- ts(f.argaforecast(n_ahead, argaforecastplusuI, gold.ts0, gold.ts))
-gold.ts.argaforecastminusu <- ts(f.argaforecast(n_ahead, argaforecastminusuI, gold.ts0, gold.ts))
+gold.ts.argaforecast <- ts(f.argaforecast(6, argaforecastI, gold.ts0, gold.ts))
+gold.ts.argaforecastplusu <- ts(f.argaforecast(6, argaforecastplusuI, gold.ts0, gold.ts))
+gold.ts.argaforecastminusu <- ts(f.argaforecast(6, argaforecastminusuI, gold.ts0, gold.ts))
 
-#gold.ts.argaforecastplusu
-#gold.ts.3
-#gold.ts.argaforecast
-#gold.ts.argaforecastminusu
-
-# WHAT IS THIS?
-plot(gold.ts.3, ylim=c(115,122), main="Insert title here")
+plot(gold.ts.3, ylim=c(115,135), main="Forecast (6 days)")
 lines(gold.ts.argaforecast, lty= 2,col = 3)
 lines(gold.ts.argaforecastplusu, lty= 2,col = 4)
 lines(gold.ts.argaforecastminusu, lty= 2,col = 4)
 
 ```
 
-As could be seen above, the last six observations that were left out on purpose fall within the forecast interval of our model.
+As can be seen above, the last six observations that were left out on purpose fall within the forecast interval of our model.
 
 <br><br>
 
 # Exponential Smoothing Forecast
 
-Next, we try to model and forecast by applying exponential smoothing methods. We skip the Simple Exponential Smoothing method as our time series has a trend but no seasonality. The most suitable methods are consequently: Holt’s Linear Trend, Exponential Trend, Damped Linear Trend e, Damped Exponential Trend.
+Now let's try to model and forecast the Gold ETF by applying exponential smoothing methods.
 
-We use the “optimal” setting to automatically estimate the exponential smoothing parameters that minimize the sum-squared residuals.
+We will skip the Simple Exponential Smoothing method, because our time series has a trend. Since there is no seasonality, the most suitable methods are the **Holt’s Linear Trend**, the **Exponential Trend**, the **Damped Linear Trend** and the **Damped Exponential Trend**.
 
+If we use the *optimal* setting to automatically estimate the exponential smoothing parameters that minimize the sum-squared residuals, the results are as follows: 
 
 ```{r}
-fit1<-holt(gold.ts, h=6)
+# Fit the models
+# h = number of periods for forecasting
+fit1<-holt(gold.ts, h=6)  
 fit2<-holt(gold.ts, initial='optimal', exponential=TRUE, h=6)
 fit3<-holt(gold.ts, initial='optimal', damped=TRUE, h=6)
 fit4<-holt(gold.ts, initial='optimal', exponential=TRUE, damped=TRUE, h=6)
-```
 
-```{r}
-# AIC Results
+# Show AIC results
 m.holt <- AIC(fit1$model)
 m.holt.exponential <- AIC(fit2$model)
-m.holt.damped<- AIC(fit3$model)
+m.holt.damped <- AIC(fit3$model)
 m.holt.exp.damped <- AIC(fit4$model)
 cbind(m.holt, m.holt.exponential, m.holt.damped, m.holt.exp.damped)
 ```
 
-Analysing the AIC results of the fits, we verify that Exponential Trend method has the lowest one. However AIC results are not so different from each other and neither the forecast values.
+The Exponential Trend method has the lowest AIC, but the methods don't differ far from each other. 
 
 ```{r}
-par(mfrow=c(2,2))
-plot(tail(gold.ts,20), main= paste("Holt's Linear"," AIC=", round(AIC(fit1$model),1)),
-     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
-lines(tail(fitted(fit1),20), col="cyan")
-plot(tail(gold.ts,20), main= paste("Holt's Exponential"," AIC=", round(AIC(fit2$model),1)),
-     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
-lines(tail(fitted(fit2),20), col="blue")
-plot(tail(gold.ts,20), main= paste("Damped Trend"," AIC=", round(AIC(fit3$model),1)),
-     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
-lines(tail(fitted(fit3),20), col="green")
-plot(tail(gold.ts,20), main= paste("Exponential Damped Trend"," AIC=", round(AIC(fit4$model),1)),
-     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
-lines(tail(fitted(fit4),20), col="red")
+
+res2 <- fit2$residuals
+tsdisplay(res2, main ="Holt's Exponential Residuals")
+Box.test(res2, lag = 20, type = "Ljung-Box")
 ```
 
-The forecast results show almost no variance against the last lag (118.70) which suggest that the parameter estimation for alpha and beta was conservative, attributing approximately all the weight to the most recent observations. We also suspect that the data set as too many observation for this method and therefore we run again Exponential Trend model to fit a sub-set with the last 180 lags.
+The residuals do not show any visible temporal structure.
 
 ```{r}
-# COMMENT CODE
-gold.ts.exp <- tail(gold.ts,180)
-fit5<-holt(gold.ts.exp, initial='optimal', exponential=TRUE, h=6)
-```
-
-```{r}
-# COMMENT CODE
-tail(gold.ts0,6)
-```
-
-We observe that the forecast values are closer to the real values of our time series than the ones that we obtained with a wider interval.
-```{r}
-# Plot forecasts
-par(mfrow=c(1,1))
-plot(tail(gold.ts0,6), col="black", xlab="Days", ylab="Prices", main="Point Forecasts (next 6 days)")
-par(new=T)
-plot(fit1$mean, col="cyan", xlab="", ylab="", axes=F)
-par(new=T)
-plot(fit2$mean, col="blue", xlab="", ylab="", axes=F)
-par(new=T)
-plot(fit3$mean, col="green", xlab="", ylab="", axes=F)
-par(new=T)
-plot(fit4$mean, col="red", xlab="", ylab="", axes=F)
-par(new=T)
-plot(fit5$mean, col="brown", xlab="", ylab="", axes=F)
-legend("topleft", lty=1, col=c("black", "cyan","blue","green","red", "brown"),
-       c("Series", "Holt's Linear", "Holt's Exponential","Damped Trend","Exponential Damped Trend", "Holt's Exponential 180d"), cex = 0.6)
+# plot forecast values
+plot(gold.ts, main= paste("Holt's Exponential Trend"," AIC=", round(AIC(fit2$model),1)),
+     xlab="", ylab = "Prices", col="black", type="l", cex.main=0.9)
+lines(fitted(fit2), col="cyan")
 ```
 
 
+```{r}
+# Plot forecasts for the next 6 days
+t <- 1:6
+plot(t, tail(gold.ts0,6), col="black", xlab="Days", ylab="Prices", main="Holt's Exponential (6 days forecast)", ylim=c(110,130))
+lines(t, fit2$mean, col="green")
+lines(t, fit2$lower[,2], col="blue")
+lines(t, fit2$upper[,2], col="blue")
+
+```
+
+As can be seen above, the last six observations that were left out on purpose also fall within the forecast interval of the model.
 
 <br><br>
 
-# Discussion
+# Conclusions
+
+The ARIMA-GARCH model main drawback is the non-normality of the GARCH residuals. The Holt's Exponential model did not show any particular problem.
+
+Both models should be tested in real time market in order to ascertain the return-risk profile of the following trading strategies:
+
+1. Sell when the price reaches the upper limit and buy when it reaches the lower limit.
+2. Buy when the upper limit is broken out and sell when the lower limit is broken out.
+
 
 <br><br>
 
 # References
 
+Hyndman, R.J. and Athanasopoulos, G. Forecasting: Principles and Practice, OTexts, 2012
+
+Makridakis, S., Wheelwright, S.C., Hyndman, R.J. Forecasting: Methods and
+Applications, 3rd edition, John Wiley & Sons, 1998.
+
+Shumway, R.H. and Stoffer, D.S. Time Series Analysis and its Applications
+with Examples in R, 3rd edition, Springer, 2011.
+
+Tsay, R.S. Analysis of Financial Time Series, 2nd edition, Wiley, 2005
 
